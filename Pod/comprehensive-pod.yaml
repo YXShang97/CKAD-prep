@@ -1,0 +1,243 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: ckad-test-pod
+  namespace: default
+  labels:
+    app: test-app
+    tier: frontend
+    version: v1
+  annotations:
+    description: "Comprehensive CKAD test pod"
+spec:
+  # Restart policy - tested in exam
+  restartPolicy: Always  # Always | OnFailure | Never
+  
+  # Service account - RBAC testing
+  serviceAccountName: default
+  automountServiceAccountToken: true
+  
+  # Security context at pod level
+  securityContext:
+    runAsUser: 1000
+    runAsGroup: 3000
+    fsGroup: 2000
+    runAsNonRoot: true
+  
+  # Node scheduling - tested in exam
+  nodeSelector:
+    disktype: ssd
+  
+  # Tolerations for tainted nodes
+  tolerations:
+  - key: "app"
+    operator: "Equal"
+    value: "frontend"
+    effect: "NoSchedule"
+  
+  # Affinity rules
+  affinity:
+    nodeAffinity:
+      requiredDuringSchedulingIgnoredDuringExecution:
+        nodeSelectorTerms:
+        - matchExpressions:
+          - key: kubernetes.io/arch
+            operator: In
+            values:
+            - amd64
+  
+  # Init containers - commonly tested
+  initContainers:
+  - name: init-setup
+    image: busybox:1.35
+    command: ['sh', '-c']
+    args: ['echo "Initializing..." && sleep 10 && echo "Init complete"']
+    volumeMounts:
+    - name: shared-data
+      mountPath: /shared
+  
+  # Main containers
+  containers:
+  - name: main-app
+    image: nginx:1.20
+    
+    # Ports - service exposure
+    ports:
+    - name: http
+      containerPort: 80
+      protocol: TCP
+    
+    # Environment variables - ConfigMap/Secret testing
+    env:
+    - name: DATABASE_URL
+      value: "mysql://localhost:3306/app"
+    - name: CONFIG_VALUE
+      valueFrom:
+        configMapKeyRef:
+          name: app-config
+          key: database.host
+          optional: true
+    - name: SECRET_PASSWORD
+      valueFrom:
+        secretKeyRef:
+          name: app-secret
+          key: db-password
+          optional: true
+    
+    # Environment from ConfigMap/Secret
+    envFrom:
+    - configMapRef:
+        name: app-config
+        optional: true
+    - secretRef:
+        name: app-secret
+        optional: true
+    
+    # Resource limits/requests - critical for exam
+    resources:
+      requests:
+        memory: "128Mi"
+        cpu: "100m"
+      limits:
+        memory: "256Mi"
+        cpu: "200m"
+    
+    # Volume mounts - storage testing
+    volumeMounts:
+    - name: shared-data
+      mountPath: /usr/share/nginx/html
+    - name: config-volume
+      mountPath: /etc/nginx/conf.d
+      readOnly: true
+    - name: secret-volume
+      mountPath: /etc/ssl/certs
+      readOnly: true
+    - name: persistent-storage
+      mountPath: /data
+    - name: empty-dir-volume
+      mountPath: /tmp/cache
+    
+    # Security context at container level
+    securityContext:
+      allowPrivilegeEscalation: false
+      readOnlyRootFilesystem: false
+      runAsNonRoot: true
+      capabilities:
+        drop:
+        - ALL
+        add:
+        - NET_BIND_SERVICE
+    
+    # Health probes - critical for exam
+    livenessProbe:
+      httpGet:
+        path: /
+        port: 80
+        httpHeaders:
+        - name: Custom-Header
+          value: Liveness
+      initialDelaySeconds: 30
+      periodSeconds: 10
+      timeoutSeconds: 5
+      failureThreshold: 3
+      successThreshold: 1
+    
+    readinessProbe:
+      httpGet:
+        path: /ready
+        port: 80
+      initialDelaySeconds: 5
+      periodSeconds: 5
+      timeoutSeconds: 3
+      failureThreshold: 3
+      successThreshold: 1
+    
+    startupProbe:
+      httpGet:
+        path: /startup
+        port: 80
+      initialDelaySeconds: 10
+      periodSeconds: 10
+      timeoutSeconds: 5
+      failureThreshold: 30
+      successThreshold: 1
+    
+    # Lifecycle hooks
+    lifecycle:
+      postStart:
+        exec:
+          command: ['/bin/sh', '-c', 'echo "Container started" > /tmp/started']
+      preStop:
+        exec:
+          command: ['/bin/sh', '-c', 'nginx -s quit; while killall -0 nginx; do sleep 1; done']
+  
+  # Sidecar container - multi-container testing
+  - name: logging-sidecar
+    image: busybox:1.35
+    command: ['sh', '-c']
+    args: ['while true; do echo "$(date): Sidecar logging" >> /shared/app.log; sleep 30; done']
+    volumeMounts:
+    - name: shared-data
+      mountPath: /shared
+    resources:
+      requests:
+        memory: "32Mi"
+        cpu: "50m"
+      limits:
+        memory: "64Mi"
+        cpu: "100m"
+  
+  # Volumes - storage concepts testing
+  volumes:
+  - name: shared-data
+    emptyDir:
+      sizeLimit: 1Gi
+  
+  - name: config-volume
+    configMap:
+      name: nginx-config
+      optional: true
+      defaultMode: 0644
+      items:
+      - key: nginx.conf
+        path: default.conf
+  
+  - name: secret-volume
+    secret:
+      secretName: tls-secret
+      optional: true
+      defaultMode: 0400
+      items:
+      - key: tls.crt
+        path: server.crt
+      - key: tls.key
+        path: server.key
+  
+  - name: persistent-storage
+    persistentVolumeClaim:
+      claimName: app-pvc
+  
+  - name: empty-dir-volume
+    emptyDir:
+      medium: Memory
+      sizeLimit: 512Mi
+  
+  # Host path (less common but possible)
+  - name: host-volume
+    hostPath:
+      path: /var/log
+      type: Directory
+  
+  # Projected volume (advanced)
+  - name: projected-volume
+    projected:
+      sources:
+      - configMap:
+          name: app-config
+          optional: true
+      - secret:
+          name: app-secret
+          optional: true
+      - serviceAccountToken:
+          expirationSeconds: 3600
+          path: token

@@ -1,0 +1,138 @@
+apiVersion: apps/v1
+kind: ReplicaSet
+metadata:
+  name: nginx-replicaset
+  namespace: default
+  labels:
+    app: nginx
+    tier: frontend
+    version: v1
+  annotations:
+    description: "CKAD ReplicaSet template"
+spec:
+  # Number of desired pods
+  replicas: 3
+
+  # Label selector to match pods
+  selector:
+    matchLabels:
+      app: nginx
+      tier: frontend
+    # Advanced selector options
+    matchExpressions:
+    - key: version
+      operator: In
+      values: [ "v1", "v1.1" ]
+    - key: environment
+      operator: NotIn
+      values: [ "development" ]
+
+  # Pod template
+  template:
+    metadata:
+      labels:
+        app: nginx
+        tier: frontend
+        version: v1
+        environment: production
+    spec:
+      # Restart policy for pods in ReplicaSet
+      restartPolicy: Always
+
+      # Security context
+      securityContext:
+        runAsUser: 1000
+        runAsGroup: 3000
+        fsGroup: 2000
+
+      # Node scheduling
+      nodeSelector:
+        disktype: ssd
+
+      # Tolerations
+      tolerations:
+      - key: "app"
+        operator: "Equal"
+        value: "frontend"
+        effect: "NoSchedule"
+
+      containers:
+      - name: nginx
+        image: nginx:1.20
+
+        ports:
+        - name: http
+          containerPort: 80
+          protocol: TCP
+        # Environment variables
+        env:
+        - name: ENVIRONMENT
+          value: "production"
+        - name: CONFIG_VALUE
+          valueFrom:
+            configMapKeyRef:
+              name: app-config
+              key: nginx.conf
+              optional: true
+        # Resource limits
+        resources:
+          requests:
+            memory: "128Mi"
+            cpu: "100m"
+          limits:
+            memory: "256Mi"
+            cpu: "200m"
+
+        # Volume mounts
+        volumeMounts:
+        - name: config-volume
+          mountPath: /etc/nginx/conf.d
+          readOnly: true
+        - name: shared-storage
+          mountPath: /usr/share/nginx/html
+        # Security context
+        securityContext:
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: false
+          runAsNonRoot: true
+          capabilities:
+            drop:
+            - ALL
+            add:
+            - NET_BIND_SERVICE
+
+        # Health probes
+        livenessProbe:
+          httpGet:
+            path: /
+            port: 80
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 3
+
+        readinessProbe:
+          httpGet:
+            path: /
+            port: 80
+          initialDelaySeconds: 5
+          periodSeconds: 5
+          timeoutSeconds: 3
+          failureThreshold: 3
+
+        # Lifecycle hooks
+        lifecycle:
+          preStop:
+            exec:
+              command: [ "/bin/sh", "-c", "nginx -s quit; while killall -0 nginx; do sleep 1; done" ]
+      # Volumes
+      volumes:
+      - name: config-volume
+        configMap:
+          name: nginx-config
+          optional: true
+          defaultMode: 644
+
+      - name: shared-storage
+        emptyDir:
+          sizeLimit: 1Gi
