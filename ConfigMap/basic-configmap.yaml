@@ -1,0 +1,56 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: app-config
+  namespace: default
+  labels:
+    app: webapp
+    environment: development
+data:
+  # Key-value pairs for application configuration
+  database_host: "mysql.database.svc.cluster.local"
+  database_port: "3306"
+  database_name: "webapp_db"
+
+  # Feature flags
+  enable_logging: "true"
+  debug_mode: "false"
+
+  # Application settings
+  max_connections: "100"
+  timeout_seconds: "30"
+
+  # File-based configuration (as string)
+  app.properties: |
+    server.port=8080
+    server.host=0.0.0.0
+    logging.level=INFO
+    cache.enabled=true
+
+  # JSON configuration
+  database.json: |
+    {
+      "host": "mysql.database.svc.cluster.local",
+      "port": 3306,
+      "database": "webapp_db",
+      "pool_size": 10,
+      "ssl": false
+    }
+
+  # Script or config file content
+  init.sh: |
+    #!/bin/bash
+    echo "Initializing application..."
+    echo "Database Host: $DATABASE_HOST"
+    echo "Database Port: $DATABASE_PORT"
+    echo "Starting application..."
+---
+# Example of binary data ConfigMap (use binaryData instead of data)
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: binary-config
+  namespace: default
+binaryData:
+  # Binary files are base64 encoded
+  config.zip: UEsDBAoAAAAAAKxK... # base64 encoded zip file

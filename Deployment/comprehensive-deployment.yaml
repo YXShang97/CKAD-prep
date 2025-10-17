@@ -1,0 +1,248 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: comprehensive-deployment
+  namespace: default
+  labels:
+    app: webapp
+    tier: frontend
+    version: v1
+  annotations:
+    deployment.kubernetes.io/revision: "1"
+    description: "Comprehensive CKAD deployment template"
+spec:
+  # Replica management
+  replicas: 3
+
+  # Deployment strategy
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 1
+      maxSurge: 1
+
+  # Revision history
+  revisionHistoryLimit: 5
+
+  # Progress deadline
+  progressDeadlineSeconds: 300
+
+  # Pod selector
+  selector:
+    matchLabels:
+      app: webapp
+      tier: frontend
+    matchExpressions:
+    - key: version
+      operator: In
+      values: [ "v1", "v1.1" ]
+
+  # Pod template
+  template:
+    metadata:
+      labels:
+        app: webapp
+        tier: frontend
+        version: v1
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "8080"
+    spec:
+      # Restart policy
+      restartPolicy: Always
+
+      # Security context
+      securityContext:
+        runAsUser: 1000
+        runAsGroup: 3000
+        fsGroup: 2000
+
+      # Node scheduling
+      nodeSelector:
+        disktype: ssd
+
+      # Tolerations
+      tolerations:
+      - key: "app"
+        operator: "Equal"
+        value: "frontend"
+        effect: "NoSchedule"
+      # Affinity
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+          - weight: 100
+            podAffinityTerm:
+              labelSelector:
+                matchExpressions:
+                - key: app
+                  operator: In
+                  values: [ "webapp" ]
+              topologyKey: kubernetes.io/hostname
+
+      # Init containers
+      initContainers:
+      - name: init-db
+        image: busybox:1.35
+        command: [ 'sh', '-c' ]
+        args: [ 'until nslookup db-service; do echo waiting for db; sleep 2; done' ]
+        resources:
+          requests:
+            memory: "32Mi"
+            cpu: "50m"
+          limits:
+            memory: "64Mi"
+            cpu: "100m"
+
+      containers:
+      - name: webapp
+        image: nginx:1.20
+        imagePullPolicy: IfNotPresent
+
+        # Ports
+        ports:
+        - name: http
+          containerPort: 80
+          protocol: TCP
+        - name: metrics
+          containerPort: 8080
+          protocol: TCP
+        # Environment variables
+        env:
+        - name: ENV
+          value: "production"
+        - name: DATABASE_HOST
+          valueFrom:
+            configMapKeyRef:
+              name: app-config
+              key: db.host
+              optional: true
+        - name: DATABASE_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: db-secret
+              key: password
+              optional: true
+        # Environment from ConfigMap/Secret
+        envFrom:
+        - configMapRef:
+            name: app-config
+            optional: true
+        - secretRef:
+            name: app-secret
+            optional: true
+        # Resource limits
+        resources:
+          requests:
+            memory: "128Mi"
+            cpu: "100m"
+          limits:
+            memory: "512Mi"
+            cpu: "500m"
+
+        # Volume mounts
+        volumeMounts:
+        - name: config-volume
+          mountPath: /etc/nginx/conf.d
+          readOnly: true
+        - name: secret-volume
+          mountPath: /etc/ssl/certs
+          readOnly: true
+        - name: data-volume
+          mountPath: /usr/share/nginx/html
+        - name: cache-volume
+          mountPath: /tmp/cache
+        # Security context
+        securityContext:
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: false
+          runAsNonRoot: true
+          capabilities:
+            drop:
+            - ALL
+            add:
+            - NET_BIND_SERVICE
+
+        # Health probes
+        livenessProbe:
+          httpGet:
+            path: /healthz
+            port: 80
+            httpHeaders:
+            - name: Custom-Header
+              value: liveness
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          timeoutSeconds: 5
+          successThreshold: 1
+          failureThreshold: 3
+
+        readinessProbe:
+          httpGet:
+            path: /ready
+            port: 80
+          initialDelaySeconds: 5
+          periodSeconds: 5
+          timeoutSeconds: 3
+          successThreshold: 1
+          failureThreshold: 3
+
+        startupProbe:
+          httpGet:
+            path: /startup
+            port: 80
+          initialDelaySeconds: 10
+          periodSeconds: 10
+          timeoutSeconds: 5
+          successThreshold: 1
+          failureThreshold: 30
+
+        # Lifecycle hooks
+        lifecycle:
+          postStart:
+            exec:
+              command: [ "/bin/sh", "-c", "echo 'Container started' > /tmp/started" ]
+          preStop:
+            exec:
+              command: [ "/bin/sh", "-c", "nginx -s quit; while killall -0 nginx; do sleep 1; done" ]
+
+      # Sidecar container
+      - name: log-collector
+        image: busybox:1.35
+        command: [ 'sh', '-c' ]
+        args: [ 'while true; do echo "$(date): Collecting logs" >> /shared/collector.log; sleep 30; done' ]
+        volumeMounts:
+        - name: data-volume
+          mountPath: /shared
+        resources:
+          requests:
+            memory: "32Mi"
+            cpu: "50m"
+          limits:
+            memory: "64Mi"
+            cpu: "100m"
+      # Volumes
+      volumes:
+      - name: config-volume
+        configMap:
+          name: nginx-config
+          optional: true
+          defaultMode: 644
+          items:
+          - key: nginx.conf
+            path: default.conf
+
+      - name: secret-volume
+        secret:
+          secretName: tls-secret
+          optional: true
+          defaultMode: 400
+
+      - name: data-volume
+        emptyDir:
+          sizeLimit: 1Gi
+
+      - name: cache-volume
+        emptyDir:
+          medium: Memory
+          sizeLimit: 512Mi

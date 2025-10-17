@@ -1,17 +1,15 @@
 apiVersion: apps/v1
-kind: ReplicaSet
+kind: Deployment
 metadata:
-  name: nginx-rs
+  name: nginx-deployment
   labels:
     app: nginx
     tier: frontend
 spec:
-  replicas: 3 # Number of pod replicas
+  replicas: 3
   selector:
-    # MUST have Pod selector
     matchLabels:
       app: nginx
-      tier: frontend
   template:
     metadata:
       labels:
@@ -25,8 +23,8 @@ spec:
         - containerPort: 80
         resources:
           requests:
-            memory: "64Mi"
-            cpu: "250m"
-          limits:
             memory: "128Mi"
-            cpu: "500m"
+            cpu: "100m"
+          limits:
+            memory: "256Mi"
+            cpu: "200m"

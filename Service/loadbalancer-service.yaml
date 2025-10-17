@@ -1,0 +1,72 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: nginx-loadbalancer
+  labels:
+    app: nginx
+    type: loadbalancer
+  annotations:
+    # Cloud provider specific annotations (examples)
+    service.beta.kubernetes.io/aws-load-balancer-type: "nlb"
+    # service.beta.kubernetes.io/azure-load-balancer-resource-group: "my-rg"
+    # cloud.google.com/load-balancer-type: "External"
+spec:
+  type: LoadBalancer
+
+  # Selector must match pod labels
+  selector:
+    app: nginx
+    tier: frontend
+
+  ports:
+  - name: http
+    port: 80 # Port exposed by the service
+    targetPort: 80 # Port on the pod container (defaults to port if omitted)
+    protocol: TCP
+  - name: https
+    port: 443
+    targetPort: 8443 # Different target port for HTTPS
+    protocol: TCP
+  # Optional: Specify load balancer source ranges (security)
+  loadBalancerSourceRanges:
+  - "10.0.0.0/8" # Only allow traffic from these IP ranges
+  - "192.168.0.0/16"
+  # Optional: Specify external traffic policy
+  externalTrafficPolicy: Cluster # Can be "Local" or "Cluster"
+---
+# Example deployment that this service will route to
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nginx-lb-deployment
+  labels:
+    app: nginx
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: nginx
+      tier: frontend
+  template:
+    metadata:
+      labels:
+        app: nginx # Must match service selector
+        tier: frontend # Must match service selector
+    spec:
+      containers:
+      - name: nginx
+        image: nginx:1.20
+        ports:
+        - containerPort: 80 # Matches service targetPort
+        - containerPort: 8443 # Matches HTTPS targetPort
+
+# Key Points:
+# - port: 80 = Service port (what clients connect to)
+# - targetPort: 80 = Pod container port (if omitted, defaults to port)
+# - LoadBalancer creates external IP (cloud provider dependent)
+# - Access externally: http://<external-ip>:80
+# - Access internally: http://nginx-loadbalancer:80
+# - Requires cloud provider support (AWS ELB, GCP LB, Azure LB)
+# - externalTrafficPolicy: "Local" preserves source IP but may cause imbalance
+# - externalTrafficPolicy: "Cluster" (default) provides better load distribution
+# - loadBalancerSourceRanges restricts access to specific IP ranges

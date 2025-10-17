@@ -1,0 +1,48 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: nginx-clusterip
+  labels:
+    app: nginx
+    type: clusterip
+spec:
+  # ClusterIP is the default service type
+  type: ClusterIP
+
+  # Selector must match pod labels
+  selector:
+    app: nginx
+    tier: frontend
+
+  ports:
+  - name: http
+    port: 80 # Port exposed by the service (cluster internal)
+    targetPort: 8080 # Port on the pod container
+    protocol: TCP # TCP is default, can also be UDP
+  # Optional: Specify cluster IP (usually auto-assigned)
+  # clusterIP: 10.96.0.100
+
+  # Session affinity (default: None)
+  sessionAffinity: None # Can be "ClientIP" for sticky sessions
+---
+# Example pod that this service will route to
+apiVersion: v1
+kind: Pod
+metadata:
+  name: nginx-pod
+  labels:
+    app: nginx # Must match service selector
+    tier: frontend # Must match service selector
+spec:
+  containers:
+  - name: nginx
+    image: nginx:1.20
+    ports:
+    - containerPort: 8080 # Must match service targetPort
+
+# Key Points:
+# - port: 80 = Service listens on port 80
+# - targetPort: 8080 = Forwards traffic to pod port 8080
+# - If targetPort is omitted, it defaults to the same value as port
+# - ClusterIP services are only accessible from within the cluster
+# - Use DNS: nginx-clusterip or nginx-clusterip.default.svc.cluster.local

@@ -1,0 +1,102 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: configmap-env-demo
+spec:
+  containers:
+  - name: webapp
+    image: nginx:alpine
+    ports:
+    - containerPort: 80
+    # METHOD 1: Inject specific ConfigMap keys as environment variables
+    env:
+    - name: DB_HOST # Environment variable name in pod
+      valueFrom:
+        configMapKeyRef:
+          name: webapp-config # ConfigMap name
+          key: database_host # Key from ConfigMap
+    - name: DB_PORT
+      valueFrom:
+        configMapKeyRef:
+          name: webapp-config
+          key: database_port
+    - name: LOG_LEVEL
+      valueFrom:
+        configMapKeyRef:
+          name: webapp-config
+          key: log_level
+          optional: true # Pod starts even if key doesn't exist
+    # METHOD 2: Inject ALL ConfigMap keys as environment variables
+    envFrom:
+    - configMapRef:
+        name: webapp-config # All keys become env vars
+    # METHOD 3: Mount ConfigMap as volume (files in filesystem)
+    volumeMounts:
+    - name: config-volume
+      mountPath: /etc/config # Directory where files will be mounted
+      readOnly: true
+    - name: nginx-config-volume
+      mountPath: /etc/nginx/nginx.conf
+      subPath: nginx.conf # Mount specific key as file
+      readOnly: true
+
+  volumes:
+  # Volume for METHOD 3: Mount entire ConfigMap as directory
+  - name: config-volume
+    configMap:
+      name: webapp-config # ConfigMap name
+      # Each key becomes a file, value becomes file content
+      # Files: database_host, database_port, database_name, log_level, max_connections, app.properties, nginx.conf
+
+      # Volume for METHOD 3: Mount specific ConfigMap key as file
+  - name: nginx-config-volume
+    configMap:
+      name: webapp-config
+      items:
+      # Specify which keys to mount
+      - key: nginx.conf # Key from ConfigMap
+        path: nginx.conf # Filename in pod
+        mode: 644 # File permissions (optional)
+      defaultMode: 644 # Default file permissions
+      optional: false # Pod fails if ConfigMap doesn't exist
+---
+# Additional example
+apiVersion: v1
+kind: Pod
+metadata:
+  name: multiple-configmaps-demo
+spec:
+  containers:
+  - name: app
+    image: busybox
+    command: [ "sleep", "3600" ]
+
+    # Mix environment variables from different sources
+    env:
+    # From specific ConfigMap keys
+    - name: DB_HOST
+      valueFrom:
+        configMapKeyRef:
+          name: webapp-config
+          key: database_host
+    # From all keys in ConfigMap
+    envFrom:
+    - configMapRef:
+        name: webapp-config
+    - configMapRef:
+        name: another-config # Can include multiple ConfigMaps
+
+    volumeMounts:
+    # Mount multiple ConfigMaps as separate directories
+    - name: webapp-config-vol
+      mountPath: /etc/webapp-config
+    - name: nginx-config-vol
+      mountPath: /etc/nginx
+
+  volumes:
+  - name: webapp-config-vol
+    configMap:
+      name: webapp-config
+  - name: nginx-config-vol
+    configMap:
+      name: nginx-config # Different ConfigMap
