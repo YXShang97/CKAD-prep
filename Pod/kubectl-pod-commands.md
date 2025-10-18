@@ -54,8 +54,12 @@ kubectl cp /local/path nginx:/path/file               # Copy to pod
 kubectl delete pod nginx                   # Delete pod
 kubectl delete pods --all                  # Delete all pods
 kubectl delete pods -l app=nginx          # Delete by label
-kubectl edit pod nginx                     # Edit pod
+kubectl edit pod nginx                     # Edit pod (limited fields)
 kubectl apply -f pod.yaml                 # Apply from file
+
+# Force replace pod when edit is not allowed (immutable fields)
+kubectl replace --force -f pod.yaml       # Delete and recreate pod
+kubectl replace --force -f pod.yaml --grace-period=0  # Force immediate
 
 # Extract pod definition to file
 kubectl get pod <pod-name> -o yaml > pod-definition.yaml
