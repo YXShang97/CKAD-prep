@@ -1,0 +1,238 @@
+# Node Selector and Affinity Examples
+
+# Prerequisites: Label nodes first
+# kubectl label nodes node1 disktype=ssd
+# kubectl label nodes node1 environment=production 
+# kubectl label nodes node1 failure-domain.beta.kubernetes.io/zone=us-west-1a
+# kubectl label nodes node2 disktype=hdd
+# kubectl label nodes node2 environment=development
+# kubectl label nodes node2 failure-domain.beta.kubernetes.io/zone=us-west-1b
+
+# 1. Simple Node Selector (exact match required)
+apiVersion: v1
+kind: Pod
+metadata:
+  name: node-selector-pod
+spec:
+  containers:
+  - name: nginx
+    image: nginx:alpine
+  nodeSelector:
+    disktype: ssd                  # MUST have this exact label
+    environment: production        # AND this exact label
+  # Pod only schedules on nodes with BOTH labels
+
+---
+# 2. Node Affinity - Required (hard constraint)
+apiVersion: v1
+kind: Pod
+metadata:
+  name: required-affinity-pod
+spec:
+  containers:
+  - name: nginx
+    image: nginx:alpine
+  affinity:
+    nodeAffinity:
+      requiredDuringSchedulingIgnoredDuringExecution:
+        nodeSelectorTerms:
+        - matchExpressions:
+          - key: disktype
+            operator: In             # In | NotIn | Exists | DoesNotExist | Gt | Lt
+            values: ["ssd", "nvme"]  # Node must have disktype=ssd OR disktype=nvme
+        # OR condition between nodeSelectorTerms
+        - matchExpressions:
+          - key: environment
+            operator: In
+            values: ["production"]
+          - key: zone
+            operator: Exists         # Zone label must exist (any value)
+  # Pod MUST be scheduled on nodes matching these expressions
+
+---
+# 3. Node Affinity - Preferred (soft constraint)
+apiVersion: v1
+kind: Pod
+metadata:
+  name: preferred-affinity-pod
+spec:
+  containers:
+  - name: nginx
+    image: nginx:alpine
+  affinity:
+    nodeAffinity:
+      preferredDuringSchedulingIgnoredDuringExecution:
+      - weight: 100                  # Higher weight = higher preference
+        preference:
+          matchExpressions:
+          - key: disktype
+            operator: In
+            values: ["ssd"]
+      - weight: 50                   # Lower weight = lower preference
+        preference:
+          matchExpressions:
+          - key: failure-domain.beta.kubernetes.io/zone
+            operator: In
+            values: ["us-west-1a"]
+  # Scheduler PREFERS these nodes but will schedule elsewhere if needed
+
+---
+# 4. Combined Required and Preferred Affinity
+apiVersion: v1
+kind: Pod
+metadata:
+  name: combined-affinity-pod
+spec:
+  containers:
+  - name: nginx
+    image: nginx:alpine
+  affinity:
+    nodeAffinity:
+      # MUST match these (hard constraint)
+      requiredDuringSchedulingIgnoredDuringExecution:
+        nodeSelectorTerms:
+        - matchExpressions:
+          - key: kubernetes.io/arch
+            operator: In
+            values: ["amd64"]
+      # PREFERS these (soft constraint)
+      preferredDuringSchedulingIgnoredDuringExecution:
+      - weight: 100
+        preference:
+          matchExpressions:
+          - key: disktype
+            operator: In
+            values: ["ssd"]
+      - weight: 80
+        preference:
+          matchExpressions:
+          - key: environment
+            operator: In
+            values: ["production"]
+
+---
+# 5. Pod Affinity (schedule near other pods)
+apiVersion: v1
+kind: Pod
+metadata:
+  name: pod-affinity-example
+  labels:
+    app: frontend
+spec:
+  containers:
+  - name: nginx
+    image: nginx:alpine
+  affinity:
+    podAffinity:
+      requiredDuringSchedulingIgnoredDuringExecution:
+      - labelSelector:
+          matchExpressions:
+          - key: app
+            operator: In
+            values: ["database"]
+        topologyKey: kubernetes.io/hostname  # Same node
+    # Schedule on same node as pods with app=database label
+
+---
+# 6. Pod Anti-Affinity (spread pods apart)
+apiVersion: v1
+kind: Pod
+metadata:
+  name: pod-anti-affinity-example
+  labels:
+    app: frontend
+spec:
+  containers:
+  - name: nginx
+    image: nginx:alpine
+  affinity:
+    podAntiAffinity:
+      requiredDuringSchedulingIgnoredDuringExecution:
+      - labelSelector:
+          matchExpressions:
+          - key: app
+            operator: In
+            values: ["frontend"]
+        topologyKey: kubernetes.io/hostname  # Different nodes
+    # Don't schedule on nodes that already have frontend pods
+
+---
+# 7. Deployment with Anti-Affinity (spread replicas)
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: web-deployment
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: web
+  template:
+    metadata:
+      labels:
+        app: web
+    spec:
+      containers:
+      - name: nginx
+        image: nginx:alpine
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+          - weight: 100
+            podAffinityTerm:
+              labelSelector:
+                matchExpressions:
+                - key: app
+                  operator: In
+                  values: ["web"]
+              topologyKey: kubernetes.io/hostname
+        # Prefer to spread replicas across different nodes
+
+---
+# 8. Complex Multi-Zone Deployment
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: multi-zone-app
+spec:
+  replicas: 6
+  selector:
+    matchLabels:
+      app: multi-zone
+  template:
+    metadata:
+      labels:
+        app: multi-zone
+    spec:
+      containers:
+      - name: app
+        image: nginx:alpine
+      affinity:
+        nodeAffinity:
+          # Require nodes in specific zones
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+            - matchExpressions:
+              - key: failure-domain.beta.kubernetes.io/zone
+                operator: In
+                values: ["us-west-1a", "us-west-1b", "us-west-1c"]
+          # Prefer SSD nodes
+          preferredDuringSchedulingIgnoredDuringExecution:
+          - weight: 100
+            preference:
+              matchExpressions:
+              - key: disktype
+                operator: In
+                values: ["ssd"]
+        podAntiAffinity:
+          # Spread across zones
+          preferredDuringSchedulingIgnoredDuringExecution:
+          - weight: 100
+            podAffinityTerm:
+              labelSelector:
+                matchExpressions:
+                - key: app
+                  operator: In
+                  values: ["multi-zone"]
+              topologyKey: failure-domain.beta.kubernetes.io/zone
+      # This deployment spreads 6 replicas across 3 zones on SSD nodes

@@ -1,0 +1,177 @@
+# Node Taints and Pod Tolerations
+
+# Step 1: Apply taint to node (use kubectl command)
+# kubectl taint nodes node1 app=frontend:NoSchedule
+# kubectl taint nodes node2 environment=production:NoExecute
+# kubectl taint nodes node3 disktype=ssd:PreferNoSchedule
+
+# Step 2: Pods with tolerations can be scheduled on tainted nodes
+
+# Pod with exact toleration match
+apiVersion: v1
+kind: Pod
+metadata:
+  name: frontend-pod
+spec:
+  containers:
+  - name: nginx
+    image: nginx:alpine
+  tolerations:
+  - key: "app"                    # Must match taint key
+    operator: "Equal"              # Equal | Exists
+    value: "frontend"              # Must match taint value
+    effect: "NoSchedule"           # Must match taint effect
+  # This pod can be scheduled on nodes with app=frontend:NoSchedule taint
+
+---
+# Pod with multiple tolerations
+apiVersion: v1
+kind: Pod
+metadata:
+  name: production-pod
+spec:
+  containers:
+  - name: app
+    image: nginx:alpine
+  tolerations:
+  - key: "environment"
+    operator: "Equal"
+    value: "production"
+    effect: "NoExecute"
+    tolerationSeconds: 300         # Evict after 5 minutes if taint added
+  - key: "app"
+    operator: "Equal"
+    value: "frontend"
+    effect: "NoSchedule"
+  # This pod tolerates both environment=production and app=frontend taints
+
+---
+# Pod with "Exists" operator (ignores value)
+apiVersion: v1
+kind: Pod
+metadata:
+  name: tolerant-pod
+spec:
+  containers:
+  - name: app
+    image: nginx:alpine
+  tolerations:
+  - key: "disktype"               # Tolerates any disktype taint
+    operator: "Exists"             # Ignores the value
+    effect: "PreferNoSchedule"
+  # Matches: disktype=ssd:PreferNoSchedule, disktype=hdd:PreferNoSchedule, etc.
+
+---
+# Pod with wildcard toleration (tolerates all taints)
+apiVersion: v1
+kind: Pod
+metadata:
+  name: wildcard-pod
+spec:
+  containers:
+  - name: app
+    image: nginx:alpine
+  tolerations:
+  - operator: "Exists"             # Tolerates ALL taints on any node
+  # This pod can be scheduled on any node regardless of taints
+
+---
+# Deployment with tolerations
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: frontend-deployment
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: frontend
+  template:
+    metadata:
+      labels:
+        app: frontend
+    spec:
+      containers:
+      - name: nginx
+        image: nginx:alpine
+      tolerations:
+      - key: "app"
+        operator: "Equal"
+        value: "frontend"
+        effect: "NoSchedule"
+      # All pods in this deployment tolerate app=frontend:NoSchedule
+
+---
+# CKAD Exam Scenario: Mixed scheduling constraints
+apiVersion: v1
+kind: Pod
+metadata:
+  name: complex-scheduling-pod
+spec:
+  containers:
+  - name: app
+    image: nginx:alpine
+    resources:
+      requests:
+        memory: "128Mi"
+        cpu: "100m"
+  
+  # Node selection
+  nodeSelector:
+    disktype: ssd                  # Only schedule on SSD nodes
+    
+  # Tolerations
+  tolerations:
+  - key: "environment"
+    operator: "Equal"
+    value: "production"
+    effect: "NoSchedule"
+  - key: "app"
+    operator: "Equal" 
+    value: "frontend"
+    effect: "PreferNoSchedule"
+    
+  # Affinity (prefer nodes in specific zone)
+  affinity:
+    nodeAffinity:
+      preferredDuringSchedulingIgnoredDuringExecution:
+      - weight: 100
+        preference:
+          matchExpressions:
+          - key: "failure-domain.beta.kubernetes.io/zone"
+            operator: In
+            values: ["us-west-1a"]
+            
+# This pod requires:
+# 1. Node with disktype=ssd label
+# 2. Tolerates environment=production:NoSchedule taint
+# 3. Tolerates app=frontend:PreferNoSchedule taint  
+# 4. Prefers nodes in us-west-1a zone
+# 5. Needs nodes with available resources (128Mi memory, 100m CPU)
+
+---
+# DaemonSet that runs on all nodes (including tainted ones)
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: log-collector
+spec:
+  selector:
+    matchLabels:
+      app: log-collector
+  template:
+    metadata:
+      labels:
+        app: log-collector
+    spec:
+      containers:
+      - name: fluentd
+        image: fluentd:latest
+      tolerations:
+      - operator: "Exists"           # Tolerate all taints
+        effect: "NoSchedule"
+      - operator: "Exists"
+        effect: "PreferNoSchedule"
+      - operator: "Exists"
+        effect: "NoExecute"
+      # This DaemonSet runs on ALL nodes, even tainted ones
