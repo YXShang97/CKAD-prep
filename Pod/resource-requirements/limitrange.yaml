@@ -1,0 +1,126 @@
+# LimitRange - Sets default resource limits and constraints for pods/containers in namespace
+apiVersion: v1
+kind: LimitRange
+metadata:
+  name: pod-limit-range
+  namespace: development
+spec:
+  limits:
+  # Container-level limits
+  - type: Container
+    default:
+      # Default limits (if not specified in pod)
+      cpu: "200m"
+      memory: "256Mi"
+    defaultRequest:
+      # Default requests (if not specified in pod)
+      cpu: "100m"
+      memory: "128Mi"
+    max:
+      # Maximum allowed per container
+      cpu: "500m"
+      memory: "512Mi"
+    min:
+      # Minimum required per container
+      cpu: "50m"
+      memory: "64Mi"
+    maxLimitRequestRatio:
+      # Max ratio of limit/request
+      cpu: "4" # Limit can be max 4x the request
+      memory: "2" # Limit can be max 2x the request
+
+  # Pod-level limits (sum of all containers)
+  - type: Pod
+    max:
+      cpu: "1000m" # Max total CPU for entire pod
+      memory: "1Gi" # Max total memory for entire pod
+    min:
+      cpu: "100m" # Min total CPU for entire pod
+      memory: "128Mi" # Min total memory for entire pod
+
+  # Persistent Volume Claims
+  - type: PersistentVolumeClaim
+    max:
+      storage: "10Gi" # Max storage per PVC
+    min:
+      storage: "1Gi" # Min storage per PVC
+---
+# Example: More restrictive LimitRange for production
+apiVersion: v1
+kind: LimitRange
+metadata:
+  name: strict-limit-range
+  namespace: production
+spec:
+  limits:
+  - type: Container
+    default:
+      cpu: "100m" # Conservative defaults for production
+      memory: "128Mi"
+    defaultRequest:
+      cpu: "50m"
+      memory: "64Mi"
+    max:
+      cpu: "300m" # Lower max limits for production
+      memory: "256Mi"
+    min:
+      cpu: "25m"
+      memory: "32Mi"
+    maxLimitRequestRatio:
+      cpu: "2" # Tighter ratio control
+      memory: "2"
+---
+# Example: Development namespace with relaxed limits
+apiVersion: v1
+kind: LimitRange
+metadata:
+  name: dev-limit-range
+  namespace: development
+spec:
+  limits:
+  - type: Container
+    default:
+      cpu: "500m" # Higher defaults for development
+      memory: "512Mi"
+    defaultRequest:
+      cpu: "200m"
+      memory: "256Mi"
+    max:
+      cpu: "1000m" # Higher max for development testing
+      memory: "1Gi"
+    min:
+      cpu: "100m"
+      memory: "128Mi"
+---
+# Test pod that will get default resources applied
+apiVersion: v1
+kind: Pod
+metadata:
+  name: test-defaults
+  namespace: development
+spec:
+  containers:
+  - name: nginx
+    image: nginx:alpine
+    # No resources specified - LimitRange defaults will be applied
+    # Will get: requests: cpu=100m, memory=128Mi; limits: cpu=200m, memory=256Mi
+
+---
+# Test pod that exceeds LimitRange maximum
+apiVersion: v1
+kind: Pod
+metadata:
+  name: test-exceed-limits
+  namespace: development
+spec:
+  containers:
+  - name: nginx
+    image: nginx:alpine
+    resources:
+      requests:
+        cpu: "600m" # This exceeds LimitRange max of 500m
+        memory: "128Mi"
+      limits:
+        cpu: "800m" # This also exceeds LimitRange max
+        memory: "256Mi"
+    # This pod creation will FAIL due to LimitRange violation

@@ -1,0 +1,156 @@
+# ResourceQuota - Limits total resource consumption across entire namespace
+apiVersion: v1
+kind: ResourceQuota
+metadata:
+  name: namespace-quota
+  namespace: development
+spec:
+  hard:
+    # CPU and Memory limits (aggregate across all pods)
+    requests.cpu: "2000m" # Total CPU requests across namespace
+    requests.memory: "4Gi" # Total memory requests across namespace
+    limits.cpu: "4000m" # Total CPU limits across namespace
+    limits.memory: "8Gi" # Total memory limits across namespace
+
+    # Object count limits
+    pods: "10" # Maximum 10 pods in namespace
+    services: "5" # Maximum 5 services
+    secrets: "10" # Maximum 10 secrets
+    configmaps: "10" # Maximum 10 configmaps
+    persistentvolumeclaims: "4" # Maximum 4 PVCs
+
+    # Storage limits
+    requests.storage: "100Gi" # Total storage requests
+
+    # Service-specific limits
+    services.nodeports: "2" # Maximum 2 NodePort services
+    services.loadbalancers: "1" # Maximum 1 LoadBalancer service
+
+    # Advanced object limits
+    count/deployments.apps: "5" # Maximum 5 deployments
+    count/replicasets.apps: "10" # Maximum 10 replicasets
+    count/jobs.batch: "3" # Maximum 3 jobs
+    count/cronjobs.batch: "2" # Maximum 2 cronjobs
+---
+# Production ResourceQuota with stricter limits
+apiVersion: v1
+kind: ResourceQuota
+metadata:
+  name: production-quota
+  namespace: production
+spec:
+  hard:
+    # More conservative resource limits for production
+    requests.cpu: "5000m" # 5 CPU cores total requests
+    requests.memory: "10Gi" # 10GB total memory requests
+    limits.cpu: "8000m" # 8 CPU cores total limits
+    limits.memory: "16Gi" # 16GB total memory limits
+
+    # Higher object limits for production
+    pods: "50"
+    services: "20"
+    secrets: "50"
+    configmaps: "50"
+    persistentvolumeclaims: "20"
+
+    # Storage
+    requests.storage: "500Gi"
+
+    # Workload limits
+    count/deployments.apps: "20"
+    count/replicasets.apps: "50"
+---
+# Development ResourceQuota with relaxed limits
+apiVersion: v1
+kind: ResourceQuota
+metadata:
+  name: dev-quota
+  namespace: development
+spec:
+  hard:
+    # Relaxed limits for development
+    requests.cpu: "1000m" # 1 CPU core total
+    requests.memory: "2Gi" # 2GB total memory
+    limits.cpu: "2000m" # 2 CPU cores total
+    limits.memory: "4Gi" # 4GB total memory
+
+    pods: "20"
+    services: "10"
+
+    # Development workloads
+    count/deployments.apps: "10"
+---
+# ResourceQuota with scopes (specific to certain pods)
+apiVersion: v1
+kind: ResourceQuota
+metadata:
+  name: priority-quota
+  namespace: production
+spec:
+  hard:
+    requests.cpu: "1000m"
+    requests.memory: "2Gi"
+  # Apply quota only to pods with specific priority class
+  scopes:
+  - PriorityClass
+  scopeSelector:
+    matchExpressions:
+    - operator: In
+      scopeName: PriorityClass
+      values: [ "high-priority" ]
+---
+# Test scenario: Namespace with both LimitRange and ResourceQuota
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: test-namespace
+---
+apiVersion: v1
+kind: LimitRange
+metadata:
+  name: test-limits
+  namespace: test-namespace
+spec:
+  limits:
+  - type: Container
+    default:
+      cpu: "100m"
+      memory: "128Mi"
+    defaultRequest:
+      cpu: "50m"
+      memory: "64Mi"
+    max:
+      cpu: "200m"
+      memory: "256Mi"
+---
+apiVersion: v1
+kind: ResourceQuota
+metadata:
+  name: test-quota
+  namespace: test-namespace
+spec:
+  hard:
+    requests.cpu: "500m" # Can fit 10 pods with default requests (50m each)
+    requests.memory: "1Gi" # Can fit ~16 pods with default requests (64Mi each)
+    limits.cpu: "1000m" # Can fit 10 pods with default limits (100m each)
+    limits.memory: "2Gi" # Can fit ~16 pods with default limits (128Mi each)
+    pods: "5" # But limited to only 5 pods total
+---
+# Pod that will consume quota
+apiVersion: v1
+kind: Pod
+metadata:
+  name: quota-consumer
+  namespace: test-namespace
+spec:
+  containers:
+  - name: nginx
+    image: nginx:alpine
+    resources:
+      requests:
+        cpu: "100m" # Consumes quota: requests.cpu
+        memory: "128Mi" # Consumes quota: requests.memory
+      limits:
+        cpu: "200m" # Consumes quota: limits.cpu
+        memory: "256Mi" # Consumes quota: limits.memory
+    # Also consumes: pods quota (count)
