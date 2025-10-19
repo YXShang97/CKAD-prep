@@ -38,6 +38,8 @@ kubectl logs nginx --tail=50              # Last 50 lines
 kubectl exec -it nginx -- /bin/bash       # Interactive shell
 kubectl exec nginx -- ls /                # Single command
 kubectl exec -it nginx -c container -- sh # Specific container
+kubectl exec nginx -- whoami              # Check current user in pod
+kubectl exec nginx -- id                  # Check user ID and groups
 ```
 
 ## Port Forward & File Copy
