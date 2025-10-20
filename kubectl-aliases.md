@@ -11,6 +11,7 @@ alias k='kubectl'
 ## Usage Examples
 
 ```bash
+k get all                         # Get all resources
 k get po                          # Get pods
 k describe po nginx               # Describe pod
 k edit svc nginx                  # Edit service
@@ -35,5 +36,5 @@ k get po -o wide                  # More details
 k get po -A                       # All namespaces
 k get po -w                       # Watch changes
 k get po -l app=nginx             # Filter by label
-k create deploy nginx --image=nginx --dry-run=client -o yaml  # Generate YAML
+k create deploy nginx --image=nginx --dry-run=client -o yaml > mypod.yaml # Generate YAML
 ```

@@ -1,0 +1,92 @@
+# Rollback Scenarios - CKAD
+
+# 1. Failed Image Update
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: failed-app
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: test-app
+  template:
+    metadata:
+      labels:
+        app: test-app
+    spec:
+      containers:
+      - name: web
+        image: nginx:1.18
+        ports:
+        - containerPort: 80
+
+# Test Failed Update:
+# k apply -f rollback-scenarios.yaml
+# k set image deploy/failed-app web=nginx:bad-tag
+# k rollout status deploy/failed-app --timeout=30s
+# k rollout undo deploy/failed-app
+---
+# 2. Multi-Revision History
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: version-app
+  annotations:
+    deployment.kubernetes.io/change-cause: "v1.0 - Initial"
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: version-app
+  template:
+    metadata:
+      labels:
+        app: version-app
+    spec:
+      containers:
+      - name: app
+        image: nginx:1.18
+        ports:
+        - containerPort: 80
+
+# Create History:
+# k apply -f rollback-scenarios.yaml
+# k set image deploy/version-app app=nginx:1.19 --record
+# k set image deploy/version-app app=nginx:1.20 --record  
+# k set image deploy/version-app app=nginx:bad --record
+# k rollout history deploy/version-app
+# k rollout undo deploy/version-app --to-revision=2
+---
+# 3. Quick Recovery Pattern
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: exam-app
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: exam
+  template:
+    metadata:
+      labels:
+        app: exam
+    spec:
+      containers:
+      - name: web
+        image: nginx:stable
+        ports:
+        - containerPort: 80
+        readinessProbe:
+          httpGet:
+            path: /
+            port: 80
+          initialDelaySeconds: 5
+          periodSeconds: 5
+
+# Quick Recovery Commands:
+# k get deploy,pods,rs
+# k set image deploy/exam-app web=nginx:nonexistent
+# k rollout undo deploy/exam-app
+# k rollout status deploy/exam-app
