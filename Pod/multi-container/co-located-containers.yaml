@@ -1,0 +1,185 @@
+# Co-located Container Examples
+
+# 1. Web Server with Reverse Proxy
+apiVersion: v1
+kind: Pod
+metadata:
+  name: web-with-proxy
+spec:
+  containers:
+  # Main web application
+  - name: web-app
+    image: nginx:alpine
+    ports:
+    - containerPort: 8080
+    volumeMounts:
+    - name: web-content
+      mountPath: /usr/share/nginx/html
+    # Serves content on port 8080
+
+    # Reverse proxy (co-located)
+  - name: reverse-proxy
+    image: nginx:alpine
+    ports:
+    - containerPort: 80 # External port
+    volumeMounts:
+    - name: proxy-config
+      mountPath: /etc/nginx/nginx.conf
+      subPath: nginx.conf
+    # Proxies external traffic to web-app on localhost:8080
+
+  volumes:
+  - name: web-content
+    emptyDir: {}
+  - name: proxy-config
+    configMap:
+      name: reverse-proxy-config
+---
+# 2. Application with Cache
+apiVersion: v1
+kind: Pod
+metadata:
+  name: app-with-cache
+spec:
+  containers:
+  # Main application
+  - name: web-app
+    image: nginx:alpine
+    ports:
+    - containerPort: 80
+    env:
+    - name: REDIS_HOST
+      value: "localhost" # Uses co-located Redis
+    - name: REDIS_PORT
+      value: "6379"
+
+  # Co-located Redis cache
+  - name: redis-cache
+    image: redis:alpine
+    ports:
+    - containerPort: 6379
+    command: [ "redis-server" ]
+    args: [ "--appendonly", "yes" ]
+    volumeMounts:
+    - name: redis-data
+      mountPath: /data
+    # Application connects via localhost:6379
+
+  volumes:
+  - name: redis-data
+    emptyDir: {}
+---
+# 3. Database with Monitoring Agent
+apiVersion: v1
+kind: Pod
+metadata:
+  name: db-with-monitoring
+spec:
+  containers:
+  # Main database
+  - name: postgres
+    image: postgres:13
+    ports:
+    - containerPort: 5432
+    env:
+    - name: POSTGRES_PASSWORD
+      value: "password123"
+    - name: POSTGRES_DB
+      value: "appdb"
+    volumeMounts:
+    - name: postgres-data
+      mountPath: /var/lib/postgresql/data
+
+  # Co-located monitoring agent
+  - name: postgres-exporter
+    image: nginx:alpine # Use appropriate postgres exporter image
+    ports:
+    - containerPort: 9187 # Metrics endpoint
+    env:
+    - name: DB_HOST
+      value: "localhost" # Connects to postgres on localhost:5432
+    - name: DB_PORT
+      value: "5432"
+    # Exposes Prometheus metrics on :9187
+
+  volumes:
+  - name: postgres-data
+    emptyDir: {}
+---
+# 4. CKAD Exam Scenario: Multi-Service Pod
+apiVersion: v1
+kind: Pod
+metadata:
+  name: exam-co-located-scenario
+  labels:
+    app: multi-service
+spec:
+  containers:
+  # Frontend service
+  - name: frontend
+    image: nginx:alpine
+    ports:
+    - containerPort: 80
+    # Serves frontend and proxies API calls to backend
+
+    # Backend service
+  - name: backend
+    image: nginx:alpine # Replace with actual backend
+    ports:
+    - containerPort: 8080
+    env:
+    - name: DB_HOST
+      value: "localhost" # Uses co-located database
+    - name: DB_PORT
+      value: "3306"
+    # Backend API service
+
+    # Database service
+  - name: mysql
+    image: mysql:8.0
+    ports:
+    - containerPort: 3306
+    env:
+    - name: MYSQL_ROOT_PASSWORD
+      value: "rootpassword"
+    - name: MYSQL_DATABASE
+      value: "appdb"
+    - name: MYSQL_USER
+      value: "appuser"
+    - name: MYSQL_PASSWORD
+      value: "apppassword"
+    volumeMounts:
+    - name: mysql-data
+      mountPath: /var/lib/mysql
+
+  volumes:
+  - name: mysql-data
+    emptyDir: {}
+---
+# 5. Shared Process Namespace Example
+apiVersion: v1
+kind: Pod
+metadata:
+  name: shared-process-namespace
+spec:
+  shareProcessNamespace: true # Containers can see each other's processes
+
+  containers:
+  - name: main-app
+    image: nginx:alpine
+    ports:
+    - containerPort: 80
+
+  - name: debug-container
+    image: busybox:latest
+    command: [ "/bin/sh", "-c" ]
+    args:
+    - |
+      while true; do
+        echo "=== Process List at $(date) ==="
+        ps aux  # Can see processes from all containers
+        echo "=== Network Connections ==="
+        netstat -tulpn 2>/dev/null || netstat -tuln  # Can see network connections
+        sleep 30
+      done
+    # This container can monitor processes from main-app

@@ -1,0 +1,247 @@
+# Sidecar Pattern Examples
+
+# 1. Web Server with Log Collector Sidecar
+apiVersion: v1
+kind: Pod
+metadata:
+  name: web-with-logging
+spec:
+  containers:
+  # Main application container
+  - name: web-server
+    image: nginx:alpine
+    ports:
+    - containerPort: 80
+    volumeMounts:
+    - name: shared-logs
+      mountPath: /var/log/nginx # Nginx writes logs here
+
+  # Sidecar: Log collector
+  - name: log-collector
+    image: fluent/fluent-bit:latest
+    volumeMounts:
+    - name: shared-logs
+      mountPath: /var/log/nginx # Reads logs from same location
+      readOnly: true
+    - name: fluent-config
+      mountPath: /fluent-bit/etc
+    env:
+    - name: LOG_LEVEL
+      value: "info"
+
+  volumes:
+  - name: shared-logs
+    emptyDir: {} # Shared temporary storage
+  - name: fluent-config
+    configMap:
+      name: fluent-bit-config
+---
+# 2. App with Monitoring Sidecar
+apiVersion: v1
+kind: Pod
+metadata:
+  name: app-with-monitoring
+spec:
+  containers:
+  # Main application
+  - name: web-app
+    image: nginx:alpine
+    ports:
+    - containerPort: 80
+    resources:
+      requests:
+        cpu: "100m"
+        memory: "128Mi"
+
+  # Sidecar: Prometheus metrics exporter
+  - name: metrics-exporter
+    image: nginx/nginx-prometheus-exporter:latest
+    ports:
+    - containerPort: 9113 # Metrics endpoint
+    args:
+    - "-nginx.scrape-uri=http://localhost/nginx_status"
+    resources:
+      requests:
+        cpu: "50m"
+        memory: "64Mi"
+    # This sidecar scrapes nginx metrics and exposes them for Prometheus
+
+---
+# 3. App with Configuration Sync Sidecar
+apiVersion: v1
+kind: Pod
+metadata:
+  name: app-with-config-sync
+spec:
+  containers:
+  # Main application
+  - name: web-app
+    image: nginx:alpine
+    ports:
+    - containerPort: 80
+    volumeMounts:
+    - name: app-config
+      mountPath: /etc/nginx/conf.d
+
+  # Sidecar: Configuration sync
+  - name: config-sync
+    image: busybox:latest
+    command: [ "/bin/sh" ]
+    args:
+    - "-c"
+    - |
+      while true; do
+        # Fetch latest config from external source
+        wget -O /shared-config/app.conf http://config-server/nginx.conf
+        echo "Config updated at $(date)"
+        sleep 300  # Sync every 5 minutes
+      done
+    volumeMounts:
+    - name: app-config
+      mountPath: /shared-config
+
+  volumes:
+  - name: app-config
+    emptyDir: {}
+---
+# 4. Database with Backup Sidecar
+apiVersion: v1
+kind: Pod
+metadata:
+  name: db-with-backup
+spec:
+  containers:
+  # Main database
+  - name: mysql
+    image: mysql:8.0
+    env:
+    - name: MYSQL_ROOT_PASSWORD
+      value: "password123"
+    ports:
+    - containerPort: 3306
+    volumeMounts:
+    - name: mysql-data
+      mountPath: /var/lib/mysql
+    - name: backup-volume
+      mountPath: /backup
+
+  # Sidecar: Database backup
+  - name: backup-agent
+    image: mysql:8.0
+    command: [ "/bin/bash" ]
+    args:
+    - "-c"
+    - |
+      while true; do
+        mysqldump -h localhost -u root -ppassword123 --all-databases > /backup/backup-$(date +%Y%m%d_%H%M%S).sql
+        echo "Backup completed at $(date)"
+        # Keep only last 7 days of backups
+        find /backup -name "backup-*.sql" -mtime +7 -delete
+        sleep 86400  # Backup daily
+      done
+    volumeMounts:
+    - name: backup-volume
+      mountPath: /backup
+
+  volumes:
+  - name: mysql-data
+    persistentVolumeClaim:
+      claimName: mysql-pvc
+  - name: backup-volume
+    persistentVolumeClaim:
+      claimName: backup-pvc
+---
+# 5. App with SSL/TLS Sidecar
+apiVersion: v1
+kind: Pod
+metadata:
+  name: app-with-ssl-sidecar
+spec:
+  containers:
+  # Main application (HTTP only)
+  - name: web-app
+    image: nginx:alpine
+    ports:
+    - containerPort: 80
+
+  # Sidecar: SSL termination proxy
+  - name: ssl-proxy
+    image: nginx:alpine
+    ports:
+    - containerPort: 443 # HTTPS endpoint
+    volumeMounts:
+    - name: ssl-certs
+      mountPath: /etc/ssl/certs
+    - name: nginx-ssl-config
+      mountPath: /etc/nginx/nginx.conf
+      subPath: nginx.conf
+    # This sidecar handles SSL/TLS and proxies to main app on localhost:80
+
+  volumes:
+  - name: ssl-certs
+    secret:
+      secretName: ssl-certificates
+  - name: nginx-ssl-config
+    configMap:
+      name: nginx-ssl-config
+---
+# 6. CKAD Exam Scenario: Web App with Multiple Sidecars
+apiVersion: v1
+kind: Pod
+metadata:
+  name: exam-multi-sidecar
+  labels:
+    app: web-app
+spec:
+  containers:
+  # Main container
+  - name: web-server
+    image: nginx:1.20
+    ports:
+    - containerPort: 80
+    volumeMounts:
+    - name: web-content
+      mountPath: /usr/share/nginx/html
+    - name: access-logs
+      mountPath: /var/log/nginx
+    resources:
+      requests:
+        cpu: "100m"
+        memory: "128Mi"
+
+  # Sidecar 1: Content updater
+  - name: content-updater
+    image: busybox:latest
+    command: [ "/bin/sh", "-c" ]
+    args:
+    - |
+      while true; do
+        echo "<h1>Updated at $(date)</h1>" > /shared/index.html
+        sleep 60
+      done
+    volumeMounts:
+    - name: web-content
+      mountPath: /shared
+
+  # Sidecar 2: Log processor
+  - name: log-processor
+    image: busybox:latest
+    command: [ "/bin/sh", "-c" ]
+    args:
+    - |
+      while true; do
+        if [ -f /logs/access.log ]; then
+          echo "Processing logs at $(date)"
+          wc -l /logs/access.log
+        fi
+        sleep 30
+      done
+    volumeMounts:
+    - name: access-logs
+      mountPath: /logs
+
+  volumes:
+  - name: web-content
+    emptyDir: {}
+  - name: access-logs
+    emptyDir: {}

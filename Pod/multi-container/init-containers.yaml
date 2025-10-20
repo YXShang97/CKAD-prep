@@ -1,0 +1,180 @@
+# Init Container Examples
+
+# 1. Basic Init Container - Setup before main app
+apiVersion: v1
+kind: Pod
+metadata:
+  name: init-demo
+spec:
+  initContainers:
+  - name: setup
+    image: busybox:1.35
+    command: [ 'sh', '-c' ]
+    args:
+    - |
+      echo "Setting up application..."
+      echo "Configuration data" > /shared/config.txt
+      echo "Setup completed at $(date)" >> /shared/setup.log
+    volumeMounts:
+    - name: shared-data
+      mountPath: /shared
+
+  containers:
+  - name: main-app
+    image: nginx:alpine
+    ports:
+    - containerPort: 80
+    volumeMounts:
+    - name: shared-data
+      mountPath: /usr/share/nginx/html
+    # Main app starts only after init container completes successfully
+
+  volumes:
+  - name: shared-data
+    emptyDir: {}
+---
+# 2. Multiple Init Containers (run sequentially)
+apiVersion: v1
+kind: Pod
+metadata:
+  name: multi-init-demo
+spec:
+  initContainers:
+  # Init container 1: Check dependencies
+  - name: check-db
+    image: busybox:1.35
+    command: [ 'sh', '-c' ]
+    args:
+    - |
+      echo "Checking database connectivity..."
+      until nslookup mysql-service; do
+        echo "Waiting for database service..."
+        sleep 2
+      done
+      echo "Database service found!"
+
+  # Init container 2: Download configuration
+  - name: download-config
+    image: busybox:1.35
+    command: [ 'sh', '-c' ]
+    args:
+    - |
+      echo "Downloading configuration..."
+      # Simulate config download
+      sleep 3
+      echo "app.conf content" > /config/app.conf
+      echo "Configuration downloaded successfully"
+    volumeMounts:
+    - name: config-data
+      mountPath: /config
+
+  # Init container 3: Database migration
+  - name: db-migration
+    image: busybox:1.35
+    command: [ 'sh', '-c' ]
+    args:
+    - |
+      echo "Running database migrations..."
+      # Simulate migration
+      sleep 2
+      echo "Migrations completed successfully"
+
+  containers:
+  - name: web-app
+    image: nginx:alpine
+    ports:
+    - containerPort: 80
+    volumeMounts:
+    - name: config-data
+      mountPath: /etc/nginx/conf.d
+    # Starts only after ALL init containers complete
+
+  volumes:
+  - name: config-data
+    emptyDir: {}
+---
+# 3. CKAD Exam Scenario: Database Setup with Init
+apiVersion: v1
+kind: Pod
+metadata:
+  name: exam-init-scenario
+  labels:
+    app: web-app
+spec:
+  initContainers:
+  # Check dependencies
+  - name: check-dependencies
+    image: busybox:1.35
+    command: [ 'sh', '-c' ]
+    args:
+    - |
+      echo "Checking dependencies..."
+      # Simulate dependency check
+      sleep 5
+      echo "All dependencies ready!"
+
+  # Prepare application data
+  - name: prepare-app
+    image: busybox:1.35
+    command: [ 'sh', '-c' ]
+    args:
+    - |
+      echo "Preparing application data..."
+      mkdir -p /app-data/html
+      echo "<h1>Application Ready</h1>" > /app-data/html/index.html
+      echo "<p>Initialized at $(date)</p>" >> /app-data/html/index.html
+      echo "Application data prepared"
+    volumeMounts:
+    - name: app-data
+      mountPath: /app-data
+
+  containers:
+  - name: web-server
+    image: nginx:alpine
+    ports:
+    - containerPort: 80
+    volumeMounts:
+    - name: app-data
+      mountPath: /usr/share/nginx/html
+    # Starts only after all init containers succeed
+
+  volumes:
+  - name: app-data
+    emptyDir: {}
+---
+# 4. Init Container with ConfigMap/Secret Processing
+apiVersion: v1
+kind: Pod
+metadata:
+  name: init-config-processing
+spec:
+  initContainers:
+  - name: process-config
+    image: busybox:1.35
+    command: [ 'sh', '-c' ]
+    args:
+    - |
+      echo "Processing configuration..."
+      # Combine configs from different sources
+      cat /raw-config/app.properties > /processed/final.conf
+      echo "database.host=mysql-service" >> /processed/final.conf
+      echo "Configuration processing completed"
+    volumeMounts:
+    - name: raw-config
+      mountPath: /raw-config
+    - name: processed-config
+      mountPath: /processed
+
+  containers:
+  - name: app
+    image: nginx:alpine
+    volumeMounts:
+    - name: processed-config
+      mountPath: /etc/app/config
+
+  volumes:
+  - name: raw-config
+    configMap:
+      name: app-config
+  - name: processed-config
+    emptyDir: {}
