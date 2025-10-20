@@ -1,0 +1,168 @@
+# CronJob Examples for CKAD
+
+# 1. Basic CronJob (every minute)
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: hello-cron
+spec:
+  schedule: "*/1 * * * *" # Every minute
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          containers:
+          - name: hello
+            image: busybox
+            command: [ "echo", "Hello from CronJob at $(date)" ]
+          restartPolicy: OnFailure
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 1
+---
+# 2. Daily Backup CronJob
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: daily-backup
+spec:
+  schedule: "0 2 * * *" # 2 AM daily
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          containers:
+          - name: backup
+            image: busybox
+            command: [ "sh", "-c" ]
+            args:
+            - |
+              echo "Starting backup at $(date)"
+              sleep 30
+              echo "Backup completed"
+          restartPolicy: OnFailure
+  successfulJobsHistoryLimit: 7 # Keep 7 successful jobs
+  failedJobsHistoryLimit: 3 # Keep 3 failed jobs
+---
+# 3. Hourly Cleanup CronJob
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: cleanup-job
+spec:
+  schedule: "0 * * * *" # Every hour
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          containers:
+          - name: cleanup
+            image: busybox
+            command: [ "sh", "-c" ]
+            args:
+            - |
+              echo "Cleaning up temporary files"
+              # Simulate cleanup
+              find /tmp -type f -name "*.tmp" -delete 2>/dev/null || true
+              echo "Cleanup finished at $(date)"
+          restartPolicy: Never
+      backoffLimit: 2
+  successfulJobsHistoryLimit: 1
+  failedJobsHistoryLimit: 1
+---
+# 4. Weekly Report CronJob
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: weekly-report
+spec:
+  schedule: "0 9 * * 1" # 9 AM every Monday
+  jobTemplate:
+    spec:
+      completions: 1
+      template:
+        spec:
+          containers:
+          - name: reporter
+            image: busybox
+            command: [ "sh", "-c" ]
+            args:
+            - |
+              echo "Generating weekly report for week $(date +'%V')"
+              sleep 15
+              echo "Report generated and sent"
+            env:
+            - name: REPORT_TYPE
+              value: "weekly"
+            resources:
+              requests:
+                memory: "64Mi"
+                cpu: "50m"
+          restartPolicy: OnFailure
+  successfulJobsHistoryLimit: 4 # Keep 4 weeks
+  failedJobsHistoryLimit: 2
+---
+# 5. Suspended CronJob (for maintenance)
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: maintenance-job
+spec:
+  schedule: "0 3 * * 0" # 3 AM every Sunday
+  suspend: true # Suspended (won't run)
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          containers:
+          - name: maintenance
+            image: busybox
+            command: [ "echo", "System maintenance" ]
+          restartPolicy: Never
+---
+# 6. CKAD Exam Pattern CronJob
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: exam-cronjob
+spec:
+  schedule: "*/5 * * * *" # Every 5 minutes
+  jobTemplate:
+    spec:
+      template:
+        metadata:
+          labels:
+            app: exam-cron
+        spec:
+          containers:
+          - name: task
+            image: busybox
+            command: [ "sh", "-c" ]
+            args:
+            - |
+              echo "CronJob execution started"
+              echo "Current time: $(date)"
+              echo "Processing data..."
+              sleep 10
+              echo "Task completed successfully"
+            env:
+            - name: TASK_ID
+              value: "cron-task"
+          restartPolicy: OnFailure
+      backoffLimit: 3
+  successfulJobsHistoryLimit: 2
+  failedJobsHistoryLimit: 1
+  concurrencyPolicy: Forbid # Don't run if previous job still running
+
+# Common Cron Schedules:
+# "*/5 * * * *"    - Every 5 minutes
+# "0 * * * *"     - Every hour
+# "0 0 * * *"     - Daily at midnight
+# "0 0 * * 0"     - Weekly on Sunday
+# "0 0 1 * *"     - Monthly on 1st
+# "0 0 1 1 *"     - Yearly on Jan 1st
+
+# Test Commands:
+# k apply -f cronjob-examples.yaml
+# k get cronjobs
+# k create job test-run --from=cronjob/hello-cron
+# k get jobs -l cronjob=hello-cron

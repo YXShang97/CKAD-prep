@@ -1,0 +1,125 @@
+# Job Examples for CKAD
+
+# 1. Basic Job
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: hello-job
+spec:
+  template:
+    spec:
+      containers:
+      - name: hello
+        image: busybox
+        command: [ "echo", "Hello from Job!" ]
+      restartPolicy: Never
+  backoffLimit: 4
+---
+# 2. Job with Multiple Completions
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: parallel-job
+spec:
+  completions: 5 # Total successful completions needed
+  parallelism: 2 # Max parallel pods
+  template:
+    spec:
+      containers:
+      - name: worker
+        image: busybox
+        command: [ "sh", "-c" ]
+        args:
+        - |
+          echo "Processing task $(date)"
+          sleep 10
+          echo "Task completed"
+      restartPolicy: Never
+  backoffLimit: 3
+---
+# 3. Job with Resource Limits
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: resource-job
+spec:
+  template:
+    spec:
+      containers:
+      - name: calculator
+        image: perl
+        command: [ "perl" ]
+        args: [ "-Mbignum=bpi", "-wle", "print bpi(1000)" ]
+        resources:
+          requests:
+            memory: "128Mi"
+            cpu: "100m"
+          limits:
+            memory: "256Mi"
+            cpu: "200m"
+      restartPolicy: Never
+  backoffLimit: 2
+---
+# 4. Job with Init Container
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: init-job
+spec:
+  template:
+    spec:
+      initContainers:
+      - name: setup
+        image: busybox
+        command: [ "sh", "-c" ]
+        args: [ "echo 'Setup complete' > /shared/setup.txt" ]
+        volumeMounts:
+        - name: shared-data
+          mountPath: /shared
+      containers:
+      - name: main
+        image: busybox
+        command: [ "sh", "-c" ]
+        args: [ "cat /shared/setup.txt && echo 'Job finished'" ]
+        volumeMounts:
+        - name: shared-data
+          mountPath: /shared
+      volumes:
+      - name: shared-data
+        emptyDir: {}
+      restartPolicy: Never
+---
+# 5. CKAD Exam Pattern Job
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: exam-job
+spec:
+  completions: 3
+  parallelism: 1
+  template:
+    metadata:
+      labels:
+        app: exam-job
+    spec:
+      containers:
+      - name: worker
+        image: busybox
+        command: [ "sh", "-c" ]
+        args:
+        - |
+          echo "Starting job at $(date)"
+          sleep 5
+          echo "Job completed successfully"
+        env:
+        - name: JOB_NAME
+          value: "exam-processing"
+      restartPolicy: Never
+  backoffLimit: 2
+  ttlSecondsAfterFinished: 300 # Auto-cleanup after 5 minutes
+
+# Test Commands:
+# k apply -f job-examples.yaml
+# k get jobs -w
+# k logs job/hello-job
+# k describe job parallel-job
