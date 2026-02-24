@@ -1,0 +1,105 @@
+# Comprehensive NetworkPolicy with All Selectors - CKAD Example
+
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: comprehensive-ingress-policy
+  namespace: production
+spec:
+  # TARGET: Apply to backend pods (what this policy protects)
+  podSelector:
+    matchLabels:
+      app: backend
+      tier: api
+
+  policyTypes:
+  - Ingress
+  - Egress
+
+  ingress:
+  # RULE 1: Allow from specific pods AND specific namespaces (AND relationship)
+  - from:
+    - podSelector:
+        matchLabels:
+          app: frontend # Source pods must have app=frontend
+    - namespaceSelector:
+        matchLabels:
+          env: production # AND source namespace must have env=production
+    ports:
+    - protocol: TCP
+      port: 8080
+
+  # RULE 2: Allow from admin pods OR monitoring namespace (OR relationship between rules)
+  - from:
+    - podSelector:
+        matchLabels:
+          role: admin # Admin pods from same namespace
+    ports:
+    - protocol: TCP
+      port: 9090
+
+  # RULE 3: Allow from monitoring namespace only (regardless of pod labels)
+  - from:
+    - namespaceSelector:
+        matchLabels:
+          name: monitoring # Any pod from monitoring namespace
+    ports:
+    - protocol: TCP
+      port: 9100
+
+  # RULE 4: Block specific IP range (deny external access)
+  - from:
+    - ipBlock:
+        cidr: 10.0.0.0/16 # Allow internal network
+        except:
+        - 10.0.1.0/24 # EXCEPT this suspicious subnet
+        - 10.0.2.0/24 # EXCEPT this banned subnet
+    ports:
+    - protocol: TCP
+      port: 80
+
+  egress:
+  # EGRESS RULE 1: Allow to database pods in same namespace
+  - to:
+    - podSelector:
+        matchLabels:
+          app: database # Target database pods
+    ports:
+    - protocol: TCP
+      port: 5432
+
+  # EGRESS RULE 2: Allow to cache namespace AND specific pods (AND relationship)
+  - to:
+    - podSelector:
+        matchLabels:
+          app: redis # Target redis pods
+    - namespaceSelector:
+        matchLabels:
+          tier: cache # AND from cache namespace
+    ports:
+    - protocol: TCP
+      port: 6379
+
+  # EGRESS RULE 3: Allow DNS resolution (essential)
+  - to: [] # Any destination
+    ports:
+    - protocol: UDP
+      port: 53 # DNS
+
+  # EGRESS RULE 4: Allow external API with IP restrictions
+  - to:
+    - ipBlock:
+        cidr: 0.0.0.0/0 # All external IPs
+        except:
+        - 192.168.1.0/24 # EXCEPT private network
+        - 172.16.0.0/12 # EXCEPT internal range
+    ports:
+    - protocol: TCP
+      port: 443 # HTTPS only
+
+# SELECTOR COMBINATIONS:
+#    - podSelector only: Pods in SAME namespace with matching labels
+#    - namespaceSelector only: ANY pod from matching namespaces
+#    - Both selectors: Pods with matching labels from matching namespaces
+#    - ipBlock: External IP ranges (with optional except blocks)
+#    - to: [] : Any destination (used for DNS, external APIs)

@@ -5,7 +5,7 @@
 ### Build Images
 
 ```bash
-docker build -t app:v1.0 .                    # Build image from Dockerfile
+docker build -t app:v1.0 .                     # Build image from Dockerfile
 docker build -t app:latest --no-cache .        # Build without cache
 docker build -f custom.dockerfile -t app .     # Use specific Dockerfile
 ```
@@ -15,7 +15,7 @@ docker build -f custom.dockerfile -t app .     # Use specific Dockerfile
 ```bash
 docker run -d --name myapp -p 8080:80 nginx   # Run detached with port mapping
 docker run -it ubuntu:20.04 /bin/bash         # Interactive terminal
-docker run --rm alpine echo "hello"            # Remove container after exit
+docker run --rm alpine echo "hello"           # Remove container after exit
 docker run -e ENV_VAR=value app:latest        # Set environment variable
 ```
 
@@ -23,8 +23,8 @@ docker run -e ENV_VAR=value app:latest        # Set environment variable
 
 ```bash
 docker images                                  # List images
-docker rmi image:tag                          # Remove image
-docker tag source:tag target:tag              # Tag image
+docker rmi image:tag                           # Remove image
+docker tag source:tag target:tag               # Tag image
 docker push registry/image:tag                 # Push to registry
 docker pull nginx:alpine                       # Pull image
 ```
