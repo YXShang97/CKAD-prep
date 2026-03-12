@@ -10,7 +10,7 @@ Taints prevent pods from being scheduled on nodes unless they have matching tole
 # Add taint to node
 kubectl taint nodes node1 key=value:taint-effect
 kubectl taint nodes node1 app=frontend:NoSchedule
-kubectl taint nodes node1 environment=production:NoExecute
+kubectl taint nodes node1 environment=production:NoExecute # evict the exsiting pods (not tolerant)
 
 # Remove taint from node (add minus sign)
 kubectl taint nodes node1 key=value:NoSchedule-
