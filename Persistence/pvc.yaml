@@ -1,0 +1,41 @@
+## Part A: Static PV + PVC (binds to pre-created PV)
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: pv-static-hostpath
+spec:
+  capacity:
+    storage: 1Gi
+  accessModes:
+  - ReadWriteOnce
+  persistentVolumeReclaimPolicy: Retain
+  storageClassName: manual
+  hostPath:
+    path: /mnt/data/pv-static
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: pvc-static-claim
+spec:
+  accessModes:
+  - ReadWriteOnce
+  resources:
+    requests:
+      storage: 500Mi
+  storageClassName: manual
+
+## Part B: Dynamic provisioning via StorageClass
+## (provisioner must be available in-cluster)
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: pvc-dynamic-claim
+spec:
+  accessModes:
+  - ReadWriteOnce
+  resources:
+    requests:
+      storage: 500Mi
+  storageClassName: manual
