@@ -53,7 +53,7 @@ k port-forward -n ingress-nginx svc/ingress-nginx-controller 8080:80
 curl -H "Host: example.com" http://localhost:8080/
 
 # Test from inside cluster
-k run test --image=curlimages/curl --rm -it -- sh
+k run test --image=curlimages/curl --restart=Never --rm -it -- sh
 curl -H "Host: example.com" http://ingress-nginx-controller.ingress-nginx/
 ```
 

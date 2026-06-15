@@ -28,7 +28,7 @@ Services provide stable network endpoints for pods. They abstract pod IPs and pr
 
 ```bash
 # ClusterIP (default)
-kubectl expose pod nginx --port=80 --target-port=8080
+kubectl expose pod nginx --port=80 --target-port=8080 # better (by default, include the pod labels as selector for the service in svc definition yaml)
 kubectl create service clusterip nginx --tcp=80:8080
 
 # NodePort

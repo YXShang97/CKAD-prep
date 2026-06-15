@@ -195,8 +195,8 @@ metadata:
   name: tls-secret
 type: kubernetes.io/tls
 data:
-  tls.crt: LS0tLS1CRUdJTi... # Base64 encoded certificate
-  tls.key: LS0tLS1CRUdJTi... # Base64 encoded private key
+  tls.crt: <BASE64_CERT_PLACEHOLDER> # NOT a real certificate; replace with base64-encoded cert
+  tls.key: <BASE64_KEY_PLACEHOLDER>  # NOT a real key; replace with base64-encoded key
 
 # Test Commands:
 # k apply -f ingress-examples.yaml

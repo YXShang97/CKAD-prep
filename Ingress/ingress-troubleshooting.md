@@ -215,7 +215,7 @@ curl -H "Host: example.com" http://localhost:8080/
 ### Testing with Test Pod
 ```bash
 # Create test pod
-k run test --image=curlimages/curl --rm -it -- sh
+k run test --image=curlimages/curl --restart=Never --rm -it -- sh
 
 # Inside pod, test ingress
 curl -H "Host: example.com" http://ingress-nginx-controller.ingress-nginx/

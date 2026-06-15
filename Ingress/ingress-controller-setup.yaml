@@ -150,6 +150,8 @@ spec:
       serviceAccountName: nginx-ingress-serviceaccount
       containers:
       - name: nginx-ingress-controller
+        # Note: some registries mirror images under registry.k8s.io
+        # If image pull fails, try registry.k8s.io/ingress-nginx/controller:v1.8.1
         image: k8s.gcr.io/ingress-nginx/controller:v1.8.1
         args:
         - /nginx-ingress-controller
@@ -180,6 +182,7 @@ spec:
         - name: https
           containerPort: 443
           protocol: TCP
+        # NOTE: probe path/port may differ across controller versions; verify for your image
         livenessProbe:
           httpGet:
             path: /healthz

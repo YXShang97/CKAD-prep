@@ -17,37 +17,31 @@ spec:
   - Egress
 
   ingress:
-  # RULE 1: Allow from specific pods AND specific namespaces (AND relationship)
+  # RULE 1: Allow frontend pods in production namespace (pod+namespace AND)
   - from:
     - podSelector:
         matchLabels:
-          app: frontend # Source pods must have app=frontend
-    - namespaceSelector:
+          app: frontend
+      namespaceSelector:
         matchLabels:
-          env: production # AND source namespace must have env=production
+          env: production
     ports:
     - protocol: TCP
       port: 8080
 
-  # RULE 2: Allow from admin pods OR monitoring namespace (OR relationship between rules)
+  # RULE 2: Allow from admin pods OR any pod in monitoring namespace (OR)
   - from:
     - podSelector:
         matchLabels:
-          role: admin # Admin pods from same namespace
-    ports:
-    - protocol: TCP
-      port: 9090
-
-  # RULE 3: Allow from monitoring namespace only (regardless of pod labels)
-  - from:
+          role: admin # Admin pods in this namespace
     - namespaceSelector:
         matchLabels:
           name: monitoring # Any pod from monitoring namespace
     ports:
     - protocol: TCP
-      port: 9100
+      port: 9090
 
-  # RULE 4: Block specific IP range (deny external access)
+  # RULE 3: Allow internal network except these subnets (ipBlock allow)
   - from:
     - ipBlock:
         cidr: 10.0.0.0/16 # Allow internal network
@@ -73,16 +67,15 @@ spec:
     - podSelector:
         matchLabels:
           app: redis # Target redis pods
-    - namespaceSelector:
+      namespaceSelector:
         matchLabels:
-          tier: cache # AND from cache namespace
+          tier: cache # AND in cache namespace
     ports:
     - protocol: TCP
       port: 6379
 
   # EGRESS RULE 3: Allow DNS resolution (essential)
-  - to: [] # Any destination
-    ports:
+  - ports:
     - protocol: UDP
       port: 53 # DNS
 
