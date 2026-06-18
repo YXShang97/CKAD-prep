@@ -59,6 +59,7 @@ If you have an O'Reilly subscription, it covers the full prep stack in one place
 - **[CKAD, 4th Edition – Video Course by Sander van Vugt](https://www.oreilly.com/library/view/certified-kubernetes-application/9780135349700/)**: 12+ hours of video training covering all exam domains; each lesson ends with a lab so you practice as you go
 - **[Video Prep Course by Benjamin Muschko](https://www.oreilly.com/library/view/certified-kubernetes-application/9781492061045/)**: more concise walkthrough with exam tips from Muschko's personal experience
 - **[Learning Path: CKAD Prep Course](https://www.oreilly.com/learning-paths/learning-path-certified/9781492061021/)**: bundles video + interactive labs — browser-based Kubernetes environments tied to specific topics, no local cluster setup needed
+- **[CKAD Exam Prep Labs (Playlist)](https://learning.oreilly.com/playlists/2e9fe6dc-2a05-47fe-ae0a-34d6485287cc/)**: standalone hands-on labs covering each exam domain; no local cluster setup needed
 
 ### Other Resources (Pre-Exam Only)
 
