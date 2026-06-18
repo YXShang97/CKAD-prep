@@ -52,19 +52,15 @@ The only external resource you're allowed during the exam is **kubernetes.io**. 
 - Use `Ctrl+F` to search within pages — faster than reading top to bottom
 - Practice finding things by **searching the docs**, not memorizing syntax
 
-### O'Reilly (Strong End-to-End Option)
-
-If you have an O'Reilly subscription, it covers the full prep stack in one place:
-
-- **[CKAD, 4th Edition – Video Course by Sander van Vugt](https://www.oreilly.com/library/view/certified-kubernetes-application/9780135349700/)**: 12+ hours of video training covering all exam domains; each lesson ends with a lab so you practice as you go
-- **[Video Prep Course by Benjamin Muschko](https://www.oreilly.com/library/view/certified-kubernetes-application/9781492061045/)**: more concise walkthrough with exam tips from Muschko's personal experience
-- **[Learning Path: CKAD Prep Course](https://www.oreilly.com/learning-paths/learning-path-certified/9781492061021/)**: bundles video + interactive labs — browser-based Kubernetes environments tied to specific topics, no local cluster setup needed
-- **[CKAD Exam Prep Labs (Playlist)](https://learning.oreilly.com/playlists/2e9fe6dc-2a05-47fe-ae0a-34d6485287cc/)**: standalone hands-on labs covering each exam domain; no local cluster setup needed
-
 ### Other Resources (Pre-Exam Only)
 
-- **Udemy – Mumshad Mannambeth's CKAD course**: the standard starting point; covers all domains
-- **kodekloud.com**: browser-based labs; good for hands-on reps without local setup
+- **[Udemy – Mumshad Mannambeth's CKAD course](https://www.udemy.com/course/certified-kubernetes-application-developer/)**: the standard starting point; covers all domains with built-in KodeKloud labs
+- **[KodeKloud – CKAD course](https://kodekloud.com/courses/certified-kubernetes-application-developer-ckad)**: browser-based labs; good for hands-on reps without local setup
+- **O'Reilly** (if you have a subscription):
+  - [CKAD, 4th Edition – Video by Sander van Vugt](https://www.oreilly.com/library/view/certified-kubernetes-application/9780135349700/): 12+ hours covering all exam domains; each lesson ends with a lab
+  - [Video Prep Course by Benjamin Muschko](https://www.oreilly.com/library/view/certified-kubernetes-application/9781492061045/): more concise walkthrough with exam tips from personal experience
+  - [Learning Path: CKAD Prep Course](https://www.oreilly.com/learning-paths/learning-path-certified/9781492061021/): bundles video + interactive labs in a guided sequence
+  - [CKAD Exam Prep Labs (Playlist)](https://learning.oreilly.com/playlists/2e9fe6dc-2a05-47fe-ae0a-34d6485287cc/): standalone hands-on labs per exam domain
 - `kubectl` cheatsheet: https://kubernetes.io/docs/reference/kubectl/cheatsheet/
 
 ---
