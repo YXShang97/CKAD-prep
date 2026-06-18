@@ -125,6 +125,11 @@ For the full current list of permitted items, see the [Linux Foundation exam rul
 
 The exam runs in a **Remote Desktop (VM)** inside the PSI secure browser. You are not working on your local machine.
 
+> [!TIP]
+> Familiarise yourself with the exam UI before exam day — the official docs cover the interface in detail:
+> - [Exam Tips & Instructions (CKA/CKAD)](https://docs.linuxfoundation.org/tc-docs/certification/tips-cka-and-ckad)
+> - [Exam UI Documentation](https://docs.linuxfoundation.org/tc-docs/certification/lf-handbook2/exam-user-interface/examui-performance-based-exams)
+
 ```
 PSI Secure Browser
 └── ExamUI
