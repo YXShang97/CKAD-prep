@@ -294,4 +294,12 @@ Both are valid approaches:
 | Services and Networking | **20%** |
 | Application Observability and Maintenance | **15%** |
 
-**Highest ROI topics**: RBAC · ConfigMaps/Secrets · resource limits · liveness/readiness probes · NetworkPolicy · multi-container pods (init + sidecar) · Deployments (rollout · history · undo · scale)
+**High-frequency topics** (based on domain weights + 2024–2025 exam reports):
+
+| Domain | Key Topics |
+|---|---|
+| Env, Config & Security (25%) | ConfigMaps · Secrets · RBAC (ServiceAccount, Role, RoleBinding) · SecurityContext · ResourceQuota · LimitRange |
+| Design & Build (20%) | Multi-container pods (init, sidecar) · Jobs · CronJobs · Volumes (PVC, emptyDir) |
+| Deployment (20%) | Rolling updates · Rollback · Canary / blue-green strategies · Helm |
+| Services & Networking (20%) | Services · Ingress · NetworkPolicy |
+| Observability (15%) | Liveness · Readiness · Startup probes · Logging · Debugging |
