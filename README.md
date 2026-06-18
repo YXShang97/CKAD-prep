@@ -78,13 +78,13 @@ The only external resource you're allowed during the exam is **kubernetes.io**. 
 - Private room, door closed
 - Government-issued ID ready (name must match your registration exactly)
 
-### Bookmarks to Prepare in Chrome
+### Pages Worth Knowing by Heart (or Fast Search)
 
-The exam browser has Firefox with your bookmarks imported if you set them up ahead of time. Organize bookmarks for:
+The exam VM has Firefox for docs access. Know how to quickly navigate to:
 
 - kubectl cheatsheet
 - Pod spec reference
-- NetworkPolicy examples  
+- NetworkPolicy examples
 - RBAC (Role, RoleBinding, ClusterRole, ClusterRoleBinding)
 - PersistentVolume / PVC
 - Resource limits / requests
