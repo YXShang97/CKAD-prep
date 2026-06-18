@@ -32,25 +32,39 @@
 
 ## Preparation Resources
 
-### killer.sh (Most Important)
+### 1. Official Kubernetes Docs (Most Important)
 
-When you purchase the CKAD exam through Linux Foundation, you get **2 free killer.sh simulator sessions** — use them. This is the closest thing to the real exam environment.
+The only external resource allowed during the exam is **kubernetes.io**. This is the single most important thing to get comfortable with before exam day — not memorizing syntax, but knowing how to find what you need quickly.
 
-- The simulator is **harder than the real exam** by design — if you can score 70%+ here, you're ready
-- Each session gives you 36 hours of access to the simulated cluster and solutions
-- Run the session under real exam conditions: timer on, no peeking at solutions mid-way
+The docs search (`site:kubernetes.io`) is unreliable during the exam. **Learn to navigate manually** via the left-hand sidebar and table of contents. The bottom-left search box on the site can help, but don't rely on it. `Ctrl+F` within a page always works and is often faster once you're on the right page.
+
+Key paths to know by hand:
+
+| What you need | Where to find it |
+|---|---|
+| Pod spec, containers, volumes | Concepts → Workloads → Pods |
+| ConfigMap / Secret usage | Tasks → Configure Pods and Containers |
+| Resource limits & requests | Tasks → Configure Pods and Containers → Assign Memory/CPU Resources |
+| Liveness & readiness probes | Tasks → Configure Pods and Containers → Configure Liveness, Readiness |
+| NetworkPolicy | Concepts → Services, Load Balancing, and Networking → Network Policies |
+| RBAC (Role, RoleBinding, etc.) | Reference → API Access Control → Using RBAC Authorization |
+| PersistentVolume / PVC | Concepts → Storage |
+| Multi-container patterns (sidecar, init) | Concepts → Workloads → Pods → Init Containers / Sidecar Containers |
+| Rolling updates / Deployment strategies | Concepts → Workloads → Deployments |
+| kubectl cheatsheet | Reference → kubectl CLI → kubectl Cheat Sheet |
+
+Spend time during preparation just navigating the docs — not reading, navigating. You want muscle memory for where things live, not just search skills.
+
+### 2. killer.sh (Closest to Real Exam)
+
+When you purchase the CKAD exam, you get **2 free killer.sh simulator sessions**. This is the most realistic exam practice available — same environment, same pressure, harder questions.
+
+- The simulator is intentionally harder than the real exam — scoring 70%+ here is a good signal you're ready
+- Each session gives you 36 hours of access to the simulated cluster and full solutions
+- Run it under real conditions: timer on, no looking at solutions mid-way
 - Review every solution afterward, including ones you got right — the explanations teach better patterns
 
 > Dashboard: https://killer.sh/dashboard
-
-### Official Kubernetes Docs
-
-The only external resource you're allowed during the exam is **kubernetes.io**. Know how to navigate it fast:
-
-- Bookmark your most-used pages before the exam (bookmarks carry into the exam browser)
-- Key sections: Tasks → Configure Pods, Concepts → Workloads, Reference → kubectl CLI
-- Use `Ctrl+F` to search within pages — faster than reading top to bottom
-- Practice finding things by **searching the docs**, not memorizing syntax
 
 ### Other Resources (Pre-Exam Only)
 
@@ -69,31 +83,28 @@ The only external resource you're allowed during the exam is **kubernetes.io**. 
 
 ### Technical Setup
 
-- **Browser**: Latest Google Chrome (required)
-- **Monitor**: Single monitor only — dual monitors will get you flagged
+- **Browser**: Latest Google Chrome (required for the PSI secure browser download)
+- **Monitor**: Single monitor only — dual monitors will get you flagged during the room scan
 - **Connection**: Wired internet strongly preferred
-- Run the **PSI compatibility check** at least a day before: installs the secure browser, checks webcam/mic
-- Disable antivirus and firewall during the exam (they can block the PSI browser)
-- Plug in your laptop — 2 hours on battery is risky
+- Run the **PSI compatibility check** at least a day before — it installs the secure browser and verifies webcam/mic; don't leave this to the last minute
+- Disable antivirus and firewall before the exam starts (they can block the PSI browser)
+- Plug in your laptop — draining battery mid-exam is a real risk
 
-### Your Environment
+### Workspace
 
-- Clear desk: no papers, devices, water bottles with labels, anything that could look like notes
-- Good lighting — proctor needs to see your face and hands clearly
-- Private room, door closed
-- Government-issued ID ready (name must match your registration exactly)
+The proctor will do a live 360° scan of your room and desk before the exam starts. Make sure:
 
-### Pages Worth Knowing by Heart (or Fast Search)
+- Desk is completely clear — no papers, notebooks, phones, or extra devices
+- Walls are clear of whiteboards or printed notes (decorative items are fine)
+- Good lighting so your face, hands, and desk are clearly visible; no strong backlight behind you
+- Private room with the door closed; public spaces are not allowed
+- Have your government-issued ID ready — the name must exactly match your exam registration
 
-The exam VM has Firefox for docs access. Know how to quickly navigate to:
+Check PSI's current candidate handbook for the full list of what is and isn't permitted at your desk (e.g. drinks, food) as policies can change.
 
-- kubectl cheatsheet
-- Pod spec reference
-- NetworkPolicy examples
-- RBAC (Role, RoleBinding, ClusterRole, ClusterRoleBinding)
-- PersistentVolume / PVC
-- Resource limits / requests
-- Liveness & readiness probes
+### ID
+
+Valid, unexpired government-issued ID with your name, photo, and signature. Passport, driver's license, or national ID card all work.
 
 ---
 
@@ -113,13 +124,13 @@ Browser (PSI Secure Browser)
 
 ### What's Pre-installed
 
-- `kubectl`, `k` alias already set up
+- `kubectl` with `k` alias already configured
 - `yq`, `curl`, `wget`, `man`
-- Multiple clusters — each question tells you which context to switch to
+- Multiple clusters — each question specifies which context to use
 
 ### Switching Contexts
 
-Every question header gives you the exact `kubectl config use-context` command. **Always run it** before starting a question, even if you think you're already on the right cluster. Getting this wrong invalidates everything you do.
+Each question specifies which cluster context to use. It's widely recommended to always run the context switch command shown in the question before starting — working on the wrong cluster invalidates your answer.
 
 ```bash
 kubectl config use-context <context-name>
@@ -129,59 +140,67 @@ kubectl config use-context <context-name>
 
 ## Critical Interface Details
 
-### Copy-Paste (Do Not Get This Wrong)
+### Copy-Paste
 
-This trips people up constantly. The shortcuts differ by where you are:
+**Right-click → Copy / Paste always works** and is the most reliable method regardless of where you are in the interface. When in doubt, use right-click.
+
+In the Linux terminal, keyboard shortcuts differ from what you might expect:
 
 | Location | Copy | Paste |
 |---|---|---|
 | **Linux Terminal** | `Ctrl+Shift+C` | `Ctrl+Shift+V` |
 | **Firefox / other apps** | `Ctrl+C` | `Ctrl+V` |
-| Right-click menu also works in both |
 
-You can also copy question text directly from the exam console and paste it into the terminal with `Ctrl+Shift+V`. This matters for long resource names — don't hand-type them.
+Resource names, namespaces, and commands are often shown in the question as blue highlighted text — clicking them copies to clipboard automatically. Use this. **Never hand-type a resource name or command that the question has already given you** — typos cost time and points.
 
 ### `Ctrl+W` is Dangerous
 
-In Chrome, `Ctrl+W` closes a tab. Inside the exam terminal, use **`Ctrl+Alt+W`** instead (e.g., to delete a word backward in the shell). The exam docs call this out explicitly.
+`Ctrl+W` closes a browser tab. Inside the terminal, use **`Ctrl+Alt+W`** instead (e.g. to delete the previous word in the shell).
 
 ### INSERT Key is Disabled
 
-In `vi`/`vim`, don't use the `Insert` key — it's blocked. Use `i` to enter insert mode as normal.
+The `Insert` key is disabled in the Remote Desktop for security reasons. In `vi`/`vim`, use `i` to enter insert mode as normal.
 
-### Lost Your Cursor?
+When pasting YAML copied from the official docs into vim, run `:set paste` before entering insert mode — this prevents vim from auto-indenting each line as it's pasted, which breaks YAML indentation.
 
-If your cursor disappears on the VM desktop, press **`Ctrl+Alt+K`** to locate it.
-
-### Font Size
-
-Zoom via the browser toolbar (`Ctrl+` / `Ctrl-`) — this resizes the entire remote desktop view. Adjust early so you're not squinting during the exam.
+```
+:set paste
+i
+<paste>
+<Esc>
+:set nopaste
+```
 
 ### Breaks
 
-You can request a break via the "Pause Exam" button — but **the timer does not stop**. Only use it if you genuinely need to step away.
+You can pause via the "Pause Exam" button — but **the timer does not stop**. Only step away if you genuinely need to.
+
+### Other Interface Notes
+
+- **Lost cursor**: press `Ctrl+Alt+K` to locate it on the VM desktop
+- **Font size**: use `+` / `-` on the PSI browser toolbar to resize the remote desktop view
 
 ---
 
 ## Time Management
 
-2 hours for 15–20 questions = roughly **6–7 minutes per question**. But questions are weighted differently.
+2 hours for 15–20 questions = roughly **6–7 minutes per question**, but questions carry different weights.
 
 - Each question shows its **percentage weight** — skip low-weight questions if stuck, come back later
-- Don't spend 15 minutes on a 4% question
-- Flag and move on: the exam UI lets you mark questions for review
-- Aim to finish a first pass with 20–25 minutes remaining for review
+- Don't sink 15 minutes into a 4% question
+- The exam UI lets you flag questions for review — use it
+- Aim to finish a first pass with 20–25 minutes left for review
 
-### What to Timebox Hard
+### What to Timebox
 
-- Anything involving multi-step debugging (check logs → find issue → fix manifest → reapply) — set a mental 8-minute cap
-- NetworkPolicy questions — the YAML is fiddly; use the docs example as a template
+- Multi-step debugging (check logs → identify issue → fix manifest → reapply) — set a mental 8-minute cap
+- For complex YAML like NetworkPolicy, go straight to the official docs example and adapt it rather than writing from scratch — the structure is non-trivial to recall under pressure
 
 ---
 
 ## Tips That Actually Matter
 
-**Use `kubectl` imperative commands to generate YAML, don't write from scratch**
+**Use `kubectl` imperative commands to generate YAML — don't write from scratch**
 
 ```bash
 # Generate a pod manifest
@@ -200,7 +219,7 @@ kubectl create configmap my-config --from-literal=key=value --dry-run=client -o 
 kubectl create serviceaccount my-sa --dry-run=client -o yaml
 ```
 
-**Set up your shell aliases immediately at exam start**
+**Set up shell aliases immediately at exam start**
 
 ```bash
 export do="--dry-run=client -o yaml"
@@ -208,12 +227,16 @@ export now="--force --grace-period 0"
 alias k=kubectl
 ```
 
-**`kubectl explain` is your friend when you forget field names**
+**`kubectl explain` when you forget field names**
 
 ```bash
 kubectl explain pod.spec.containers.resources
 kubectl explain networkpolicy.spec.ingress
 ```
+
+**`kubectl apply -f` vs `kubectl edit`**
+
+Both have their place. `apply -f` with a local file is safer and repeatable — if something breaks, you still have the file to fix and re-apply. `kubectl edit` edits the live resource directly; if the save fails (e.g. invalid YAML), it drops you back into the editor with the error message, which can actually help you identify the problem quickly. Cross-reference the error against the official docs to fix it.
 
 **Verify your work before moving on**
 
@@ -223,9 +246,9 @@ kubectl describe pod <name>             # check events for errors
 kubectl logs <name>                     # check application output
 ```
 
-**Don't edit live resources if you can avoid it** — `kubectl apply -f` with a file is safer and repeatable. If something breaks, you can re-apply.
+**Copy YAML from the official docs, don't reason from scratch**
 
-**For tricky questions, check if there's a similar example in the official docs** — copy the YAML structure, modify it. Faster than reasoning from scratch under time pressure.
+For complex resources (NetworkPolicy, RBAC, PV/PVC), find the relevant example in the docs, copy the structure, and adapt it. Faster and less error-prone than constructing from memory under time pressure.
 
 ---
 
@@ -233,11 +256,11 @@ kubectl logs <name>                     # check application output
 
 | Domain | Weight |
 |---|---|
+| Application Environment, Configuration and Security | 25% |
 | Application Design and Build | 20% |
 | Application Deployment | 20% |
-| Application Observability and Maintenance | 15% |
-| Application Environment, Configuration and Security | 25% |
 | Services and Networking | 20% |
+| Application Observability and Maintenance | 15% |
 
 Highest ROI topics: **RBAC, ConfigMaps/Secrets, resource limits, probes, NetworkPolicy, multi-container pods (sidecar/init), rolling updates**.
 
@@ -247,6 +270,6 @@ Highest ROI topics: **RBAC, ConfigMaps/Secrets, resource limits, probes, Network
 
 - [Exam Tips (Linux Foundation)](https://docs.linuxfoundation.org/tc-docs/certification/tips-cka-and-ckad)
 - [Exam UI Documentation](https://docs.linuxfoundation.org/tc-docs/certification/lf-handbook2/exam-user-interface/examui-performance-based-exams)
-- [CKAD Curriculum](https://github.com/cncf/curriculum)
+- [CKAD Curriculum (CNCF)](https://www.cncf.io/training/certification/ckad/)
 - [kubectl Cheatsheet](https://kubernetes.io/docs/reference/kubectl/cheatsheet/)
 - [killer.sh Dashboard](https://killer.sh/dashboard)
