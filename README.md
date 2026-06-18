@@ -52,6 +52,15 @@ The only external resource you're allowed during the exam is **kubernetes.io**. 
 - Use `Ctrl+F` to search within pages — faster than reading top to bottom
 - Practice finding things by **searching the docs**, not memorizing syntax
 
+### O'Reilly (Strong End-to-End Option)
+
+If you have an O'Reilly subscription, it covers the full prep stack in one place:
+
+- **Book**: *Certified Kubernetes Application Developer (CKAD) Study Guide, 4th Edition* by Benjamin Muschko — structured by exam domain, good for building a solid mental model before doing hands-on practice
+- **Video course**: pairs well with the book; Muschko walks through the same material with live demos
+- **Interactive Labs**: browser-based Kubernetes environments tied to specific topics — no local cluster setup needed, great for quick reps between chapters
+- **Learning Path**: O'Reilly's curated CKAD learning path bundles the above; useful if you want a guided sequence rather than picking resources yourself
+
 ### Other Resources (Pre-Exam Only)
 
 - **Udemy – Mumshad Mannambeth's CKAD course**: the standard starting point; covers all domains
